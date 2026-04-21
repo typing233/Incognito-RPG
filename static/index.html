@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incognito RPG - 隐身笔记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #ffffff;
+            color: #37352f;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .start-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .start-title {
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .start-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 3rem;
+        }
+
+        .note-type-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            max-width: 600px;
+            justify-content: center;
+        }
+
+        .note-type-btn {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border: 2px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+
+        .note-type-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: white;
+            transform: translateY(-2px);
+        }
+
+        .note-type-btn.selected {
+            background: white;
+            color: #667eea;
+            border-color: white;
+        }
+
+        .start-btn {
+            margin-top: 2rem;
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 60px 80px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .editor-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 20px;
+        }
+
+        .editor-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .editor-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .editor-container::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+
+        .editor-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #37352f;
+            margin-bottom: 8px;
+            border: none;
+            outline: none;
+            background: transparent;
+            width: 100%;
+        }
+
+        .editor-subtitle {
+            font-size: 0.9rem;
+            color: #9b9a97;
+            margin-bottom: 30px;
+        }
+
+        .editor-content {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: #37352f;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .editor-content p {
+            margin-bottom: 16px;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: #37352f;
+            animation: blink 1s infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .progress-panel {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            padding: 20px 24px;
+            min-width: 300px;
+            max-width: 400px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .progress-panel.collapsed {
+            min-width: auto;
+            padding: 12px 16px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #9b9a97;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9b9a97;
+            font-size: 1.2rem;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .progress-toggle:hover {
+            background: #f7f6f3;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: #e9e9e7;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #37352f;
+        }
+
+        .progress-percent {
+            font-size: 0.85rem;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .choice-options {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e9e9e7;
+        }
+
+        .choice-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+
+        .choice-option {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: #f7f6f3;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .choice-option:hover {
+            background: #e9e9e7;
+            transform: translateX(4px);
+        }
+
+        .choice-key {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .choice-text {
+            font-size: 0.9rem;
+            color: #37352f;
+            line-height: 1.5;
+        }
+
+        .ending-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .ending-screen.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .ending-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .ending-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .ending-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #37352f;
+        }
+
+        .ending-title.success {
+            color: #10b981;
+        }
+
+        .ending-title.caught {
+            color: #ef4444;
+        }
+
+        .ending-description {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        .restart-btn {
+            padding: 12px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .hint-text {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .hint-text.visible {
+            opacity: 1;
+        }
+
+        .collapsed-panel {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            z-index: 100;
+            display: none;
+        }
+
+        .collapsed-panel.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="start-screen" id="startScreen">
+        <h1 class="start-title">Incognito RPG</h1>
+        <p class="start-subtitle">一款披着笔记软件外衣的文字冒险越狱游戏</p>
+        <div class="note-type-selector" id="noteTypeSelector">
+        </div>
+        <button class="start-btn" id="startBtn" disabled>开始游戏</button>
+    </div>
+
+    <div class="game-container" id="gameContainer" style="display: none;">
+        <div class="editor-container">
+            <input type="text" class="editor-title" id="editorTitle" value="无标题" readonly>
+            <div class="editor-subtitle" id="editorSubtitle">高等数学笔记</div>
+            <div class="editor-content" id="editorContent">
+                <span class="cursor" id="cursor"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="progress-panel" id="progressPanel">
+        <div class="progress-header">
+            <span class="progress-title">RPG 进度</span>
+            <button class="progress-toggle" id="collapseBtn">−</button>
+        </div>
+        <div class="progress-percent" id="progressPercent">0%</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">正在加载游戏...</div>
+        <div class="choice-options" id="choiceOptions" style="display: none;">
+            <div class="choice-title">请选择你的行动（按对应数字键）：</div>
+            <div id="optionsList"></div>
+        </div>
+    </div>
+
+    <div class="collapsed-panel" id="collapsedPanel">
+        RPG进度: <span id="collapsedPercent">0%</span>
+    </div>
+
+    <div class="hint-text" id="hintText">开始敲击键盘来推进剧情吧！</div>
+
+    <div class="ending-screen" id="endingScreen">
+        <div class="ending-card">
+            <div class="ending-icon" id="endingIcon">🎉</div>
+            <h2 class="ending-title" id="endingTitle">恭喜你！</h2>
+            <p class="ending-description" id="endingDescription">你成功逃脱了！</p>
+            <button class="restart-btn" id="restartBtn">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = null;
+        let selectedNoteType = null;
+        let isWaitingForChoice = false;
+        let isPanelCollapsed = false;
+        let currentNoteContent = '';
+
+        const noteTypeNames = {
+            'math': '高等数学笔记',
+            'english': '大学英语笔记',
+            'physics': '大学物理笔记',
+            'history': '中国近现代史笔记'
+        };
+
+        async function fetchNoteTypes() {
+            try {
+                const response = await fetch('/api/note-types');
+                const data = await response.json();
+                return data.note_types;
+            } catch (error) {
+                console.error('Failed to fetch note types:', error);
+                return [
+                    { id: 'math', name: '高等数学' },
+                    { id: 'english', name: '大学英语' },
+                    { id: 'physics', name: '大学物理' },
+                    { id: 'history', name: '中国近现代史' }
+                ];
+            }
+        }
+
+        async function initStartScreen() {
+            const noteTypes = await fetchNoteTypes();
+            const selector = document.getElementById('noteTypeSelector');
+            
+            selector.innerHTML = noteTypes.map(type => `
+                <button class="note-type-btn" data-type="${type.id}">
+                    ${type.name}
+                </button>
+            `).join('');
+
+            selector.querySelectorAll('.note-type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selector.querySelectorAll('.note-type-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedNoteType = btn.dataset.type;
+                    document.getElementById('startBtn').disabled = false;
+                });
+            });
+        }
+
+        async function startGame() {
+            try {
+                const response = await fetch('/api/start-game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ note_type: selectedNoteType })
+                });
+                
+                const data = await response.json();
+                sessionId = data.session_id;
+                
+                document.getElementById('startScreen').classList.add('hidden');
+                document.getElementById('gameContainer').style.display = 'flex';
+                document.getElementById('editorSubtitle').textContent = noteTypeNames[selectedNoteType];
+                
+                updateProgress(data.progress, data.initial_node);
+                
+                setTimeout(() => {
+                    document.getElementById('hintText').classList.add('visible');
+                    setTimeout(() => {
+                        document.getElementById('hintText').classList.remove('visible');
+                    }, 3000);
+                }, 500);
+                
+            } catch (error) {
+                console.error('Failed to start game:', error);
+                alert('游戏启动失败，请刷新页面重试');
+            }
+        }
+
+        async function handleKeystroke() {
+            if (!sessionId || isWaitingForChoice) return;
+            
+            try {
+                const response = await fetch(`/api/keystroke/${sessionId}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.text_to_add) {
+                    addToEditor(data.text_to_add);
+                }
+                
+                updateProgress(data.progress_percent, data.progress_description);
+                
+                if (data.is_choice && !data.game_ended) {
+                    showChoices(data.options);
+                    isWaitingForChoice = true;
+                }
+                
+                if (data.is_ending) {
+                    showEnding(data.ending_type, data.progress_description);
+                }
+                
+            } catch (error) {
+                console.error('Failed to process keystroke:', error);
+            }
+        }
+
+        async function makeChoice(choiceKey) {
+            if (!sessionId || !isWaitingForChoice) return;
+            
+            try {
+                const response = await fetch(`/api/make-choice/${sessionId}?choice_key=${choiceKey}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    hideChoices();
+                    isWaitingForChoice = false;
+                    updateProgress(data.progress, data.next_description);
+                    
+                    if (data.is_ending) {
+                        showEnding(data.ending_type, data.next_description);
+                    } else if (data.is_choice) {
+                        setTimeout(() => {
+                            showChoices(data.options);
+                            isWaitingForChoice = true;
+                        }, 500);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Failed to make choice:', error);
+            }
+        }
+
+        function addToEditor(text) {
+            const content = document.getElementById('editorContent');
+            const cursor = document.getElementById('cursor');
+            
+            cursor.remove();
+            currentNoteContent += text;
+            content.textContent = currentNoteContent;
+            content.appendChild(cursor);
+            
+            content.scrollTop = content.scrollHeight;
+        }
+
+        function updateProgress(percent, description) {
+            document.getElementById('progressPercent').textContent = `${percent}%`;
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.getElementById('progressText').textContent = description;
+            document.getElementById('collapsedPercent').textContent = `${percent}%`;
+        }
+
+        function showChoices(options) {
+            const optionsList = document.getElementById('optionsList');
+            const choiceOptions = document.getElementById('choiceOptions');
+            
+            optionsList.innerHTML = options.map(opt => `
+                <div class="choice-option" data-key="${opt.key}">
+                    <span class="choice-key">${opt.key}</span>
+                    <span class="choice-text">${opt.text}</span>
+                </div>
+            `).join('');
+            
+            optionsList.querySelectorAll('.choice-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    makeChoice(opt.dataset.key);
+                });
+            });
+            
+            choiceOptions.style.display = 'block';
+            
+            document.getElementById('hintText').textContent = '按数字键选择你的行动！';
+            document.getElementById('hintText').classList.add('visible');
+        }
+
+        function hideChoices() {
+            document.getElementById('choiceOptions').style.display = 'none';
+            document.getElementById('hintText').classList.remove('visible');
+        }
+
+        function showEnding(endingType, description) {
+            const endingScreen = document.getElementById('endingScreen');
+            const endingIcon = document.getElementById('endingIcon');
+            const endingTitle = document.getElementById('endingTitle');
+            const endingDescription = document.getElementById('endingDescription');
+            
+            if (endingType === 'success') {
+                endingIcon.textContent = '🎉';
+                endingTitle.textContent = '恭喜你！越狱成功！';
+                endingTitle.className = 'ending-title success';
+            } else {
+                endingIcon.textContent = '😢';
+                endingTitle.textContent = '很遗憾，越狱失败...';
+                endingTitle.className = 'ending-title caught';
+            }
+            
+            endingDescription.textContent = description;
+            endingScreen.classList.add('visible');
+        }
+
+        function hideEnding() {
+            document.getElementById('endingScreen').classList.remove('visible');
+        }
+
+        function restartGame() {
+            sessionId = null;
+            selectedNoteType = null;
+            isWaitingForChoice = false;
+            currentNoteContent = '';
+            
+            hideEnding();
+            hideChoices();
+            
+            document.getElementById('editorContent').textContent = '';
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            cursor.id = 'cursor';
+            document.getElementById('editorContent').appendChild(cursor);
+            
+            document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('startScreen').classList.remove('hidden');
+            document.getElementById('startBtn').disabled = true;
+            
+            document.querySelectorAll('.note-type-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            updateProgress(0, '选择笔记类型开始游戏');
+        }
+
+        function togglePanel() {
+            const panel = document.getElementById('progressPanel');
+            const collapsed = document.getElementById('collapsedPanel');
+            
+            isPanelCollapsed = !isPanelCollapsed;
+            
+            if (isPanelCollapsed) {
+                panel.classList.add('collapsed');
+                panel.style.display = 'none';
+                collapsed.classList.add('visible');
+                document.getElementById('collapseBtn').textContent = '+';
+            } else {
+                panel.classList.remove('collapsed');
+                panel.style.display = 'block';
+                collapsed.classList.remove('visible');
+                document.getElementById('collapseBtn').textContent = '−';
+            }
+        }
+
+        document.addEventListener('keydown', async (e) => {
+            if (!sessionId) return;
+            
+            if (isWaitingForChoice) {
+                const key = e.key;
+                if (['1', '2', '3', '4'].includes(key)) {
+                    e.preventDefault();
+                    await makeChoice(key);
+                }
+                return;
+            }
+            
+            if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter' || e.key === 'Space') {
+                e.preventDefault();
+                await handleKeystroke();
+            }
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', restartGame);
+        document.getElementById('collapseBtn').addEventListener('click', togglePanel);
+        document.getElementById('collapsedPanel').addEventListener('click', togglePanel);
+
+        initStartScreen();
+    </script>
+</body>
+</html>
