@@ -505,6 +505,45 @@
             'history': '中国近现代史笔记'
         };
 
+        const courseReplacements = {
+            'math': {
+                '数学课': '数学课',
+                '数学': '数学',
+                '微积分': '微积分',
+                '讲着微积分': '讲着微积分',
+                '这道题': '这道题',
+                '做题': '做题',
+                '记着数学': '记着数学'
+            },
+            'english': {
+                '数学课': '英语课',
+                '数学': '英语',
+                '微积分': '语法',
+                '讲着微积分': '讲着英语语法',
+                '这道题': '这个句子',
+                '做题': '做练习',
+                '记着数学': '记着英语'
+            },
+            'physics': {
+                '数学课': '物理课',
+                '数学': '物理',
+                '微积分': '力学公式',
+                '讲着微积分': '讲着力学公式',
+                '这道题': '这道题',
+                '做题': '做题',
+                '记着数学': '记着物理'
+            },
+            'history': {
+                '数学课': '历史课',
+                '数学': '历史',
+                '微积分': '历史事件',
+                '讲着微积分': '讲着历史事件',
+                '这道题': '这个问题',
+                '做题': '回答问题',
+                '记着数学': '记着历史'
+            }
+        };
+
         async function fetchNoteTypes() {
             try {
                 const response = await fetch('/api/note-types');
@@ -643,14 +682,36 @@
             content.textContent = currentNoteContent;
             content.appendChild(cursor);
             
-            container.scrollTop = container.scrollHeight;
-            cursor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        function replaceCourseNames(description) {
+            if (!selectedNoteType || !courseReplacements[selectedNoteType]) {
+                return description;
+            }
+            
+            const replacements = courseReplacements[selectedNoteType];
+            let result = description;
+            
+            const sortedKeys = Object.keys(replacements).sort((a, b) => b.length - a.length);
+            
+            for (const key of sortedKeys) {
+                if (key !== replacements[key]) {
+                    const regex = new RegExp(key, 'g');
+                    result = result.replace(regex, replacements[key]);
+                }
+            }
+            
+            return result;
         }
 
         function updateProgress(percent, description) {
+            const replacedDescription = replaceCourseNames(description);
             document.getElementById('progressPercent').textContent = `${percent}%`;
             document.getElementById('progressBar').style.width = `${percent}%`;
-            document.getElementById('progressText').textContent = description;
+            document.getElementById('progressText').textContent = replacedDescription;
             document.getElementById('collapsedPercent').textContent = `${percent}%`;
         }
 
