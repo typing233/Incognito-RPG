@@ -635,6 +635,7 @@
 
         function addToEditor(text) {
             const content = document.getElementById('editorContent');
+            const container = document.getElementById('editorContainer');
             const cursor = document.getElementById('cursor');
             
             cursor.remove();
@@ -642,7 +643,8 @@
             content.textContent = currentNoteContent;
             content.appendChild(cursor);
             
-            content.scrollTop = content.scrollHeight;
+            container.scrollTop = container.scrollHeight;
+            cursor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function updateProgress(percent, description) {
