@@ -32,6 +32,8 @@
             justify-content: center;
             z-index: 1000;
             transition: opacity 0.5s ease;
+            overflow-y: auto;
+            padding: 20px;
         }
 
         .start-screen.hidden {
@@ -50,7 +52,65 @@
         .start-subtitle {
             font-size: 1.2rem;
             color: rgba(255,255,255,0.9);
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .character-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            max-width: 600px;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .character-card {
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            border: 2px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .character-card:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: white;
+            transform: translateY(-2px);
+        }
+
+        .character-card.selected {
+            background: white;
+            color: #667eea;
+            border-color: white;
+        }
+
+        .character-portrait {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .character-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .character-desc {
+            font-size: 0.8rem;
+            opacity: 0.8;
         }
 
         .note-type-selector {
@@ -59,6 +119,7 @@
             gap: 1rem;
             max-width: 600px;
             justify-content: center;
+            margin-bottom: 2rem;
         }
 
         .note-type-btn {
@@ -86,7 +147,7 @@
         }
 
         .start-btn {
-            margin-top: 2rem;
+            margin-top: 1rem;
             padding: 1rem 3rem;
             font-size: 1.2rem;
             font-weight: 600;
@@ -163,10 +224,6 @@
             word-wrap: break-word;
         }
 
-        .editor-content p {
-            margin-bottom: 16px;
-        }
-
         .cursor {
             display: inline-block;
             width: 2px;
@@ -180,6 +237,72 @@
         @keyframes blink {
             0%, 50% { opacity: 1; }
             51%, 100% { opacity: 0; }
+        }
+
+        .risk-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 16px 20px;
+            min-width: 280px;
+            z-index: 100;
+        }
+
+        .risk-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #9b9a97;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .risk-item {
+            margin-bottom: 10px;
+        }
+
+        .risk-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .risk-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+
+        .risk-label.teacher {
+            color: #ef4444;
+        }
+
+        .risk-label.classmate {
+            color: #f59e0b;
+        }
+
+        .risk-bar-container {
+            width: 100%;
+            height: 6px;
+            background: #e9e9e7;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .risk-bar.teacher {
+            height: 100%;
+            background: linear-gradient(90deg, #fca5a5, #ef4444);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .risk-bar.classmate {
+            height: 100%;
+            background: linear-gradient(90deg, #fcd34d, #f59e0b);
+            border-radius: 3px;
+            transition: width 0.5s ease;
         }
 
         .progress-panel {
@@ -329,6 +452,8 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.5s ease;
+            overflow-y: auto;
+            padding: 20px;
         }
 
         .ending-screen.visible {
@@ -340,7 +465,7 @@
             background: white;
             border-radius: 20px;
             padding: 40px;
-            max-width: 500px;
+            max-width: 600px;
             text-align: center;
             animation: slideUp 0.5s ease;
         }
@@ -380,7 +505,78 @@
             font-size: 1rem;
             line-height: 1.8;
             color: #6b7280;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+        }
+
+        .ending-stats {
+            background: #f7f6f3;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.9rem;
+        }
+
+        .stat-label {
+            color: #6b7280;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #37352f;
+        }
+
+        .achievements-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .achievement-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #fef3c7, #fcd34d);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            animation: pulse 1s ease;
+        }
+
+        .achievement-badge.rare {
+            background: linear-gradient(135deg, #c4b5fd, #8b5cf6);
+        }
+
+        .achievement-badge.legendary {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            box-shadow: 0 2px 10px rgba(245, 158, 11, 0.4);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .receipt-container {
+            background: #fafafa;
+            border: 1px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
         .restart-btn {
@@ -393,11 +589,29 @@
             border-radius: 50px;
             cursor: pointer;
             transition: all 0.3s ease;
+            margin-right: 10px;
         }
 
         .restart-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .secondary-btn {
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .secondary-btn:hover {
+            background: #667eea;
+            color: white;
         }
 
         .hint-text {
@@ -439,14 +653,262 @@
         .collapsed-panel.visible {
             display: block;
         }
+
+        .notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+            padding: 32px;
+            max-width: 400px;
+            text-align: center;
+            z-index: 3000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .notification.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .notification-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+
+        .notification-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #37352f;
+            margin-bottom: 8px;
+        }
+
+        .notification-desc {
+            font-size: 0.95rem;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .notification-rarity {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .rarity-common {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .rarity-uncommon {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .rarity-rare {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .rarity-legendary {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .notification-btn {
+            padding: 10px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .notification-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .special-event-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .special-event-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .special-event-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+            padding: 28px;
+            max-width: 450px;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .event-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .event-icon {
+            font-size: 2rem;
+        }
+
+        .event-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ef4444;
+        }
+
+        .event-description {
+            font-size: 0.95rem;
+            color: #37352f;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .event-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .event-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f7f6f3;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .event-option:hover {
+            background: #e9e9e7;
+            border-left-color: #667eea;
+        }
+
+        .event-option-key {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 12px;
+        }
+
+        .event-option-text {
+            font-size: 0.9rem;
+            color: #37352f;
+        }
+
+        .fragment-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 16px 20px;
+            min-width: 200px;
+            z-index: 100;
+        }
+
+        .fragment-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #9b9a97;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .fragment-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .fragment-slot {
+            width: 36px;
+            height: 36px;
+            background: #e9e9e7;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .fragment-slot.collected {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            animation: pulse 0.5s ease;
+        }
+
+        .fragment-slot.locked {
+            opacity: 0.4;
+        }
+
+        .fragment-count {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="start-screen" id="startScreen">
         <h1 class="start-title">Incognito RPG</h1>
         <p class="start-subtitle">一款披着笔记软件外衣的文字冒险越狱游戏</p>
+        
+        <p class="section-title">选择角色</p>
+        <div class="character-selector" id="characterSelector">
+        </div>
+        
+        <p class="section-title">选择笔记类型</p>
         <div class="note-type-selector" id="noteTypeSelector">
         </div>
+        
         <button class="start-btn" id="startBtn" disabled>开始游戏</button>
     </div>
 
@@ -456,6 +918,35 @@
             <div class="editor-subtitle" id="editorSubtitle">高等数学笔记</div>
             <div class="editor-content" id="editorContent">
                 <span class="cursor" id="cursor"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="fragment-panel" id="fragmentPanel" style="display: none;">
+        <div class="fragment-title">📚 笔记碎片</div>
+        <div class="fragment-list" id="fragmentList">
+        </div>
+        <div class="fragment-count" id="fragmentCount">0/5 已收集</div>
+    </div>
+
+    <div class="risk-panel" id="riskPanel" style="display: none;">
+        <div class="risk-title">⚠️ 风险值</div>
+        <div class="risk-item">
+            <div class="risk-label teacher">
+                <span>👨‍🏫 老师警觉度</span>
+                <span id="teacherAlertness">0%</span>
+            </div>
+            <div class="risk-bar-container">
+                <div class="risk-bar teacher" id="teacherRiskBar" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="risk-item">
+            <div class="risk-label classmate">
+                <span>👥 同学怀疑度</span>
+                <span id="classmateSuspicion">0%</span>
+            </div>
+            <div class="risk-bar-container">
+                <div class="risk-bar classmate" id="classmateRiskBar" style="width: 0%"></div>
             </div>
         </div>
     </div>
@@ -487,16 +978,77 @@
             <div class="ending-icon" id="endingIcon">🎉</div>
             <h2 class="ending-title" id="endingTitle">恭喜你！</h2>
             <p class="ending-description" id="endingDescription">你成功逃脱了！</p>
+            
+            <div class="ending-stats" id="endingStats" style="display: none;">
+                <div class="stat-row">
+                    <span class="stat-label">角色</span>
+                    <span class="stat-value" id="statCharacter">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">敲击次数</span>
+                    <span class="stat-value" id="statKeystrokes">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">老师警觉度</span>
+                    <span class="stat-value" id="statTeacherRisk">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">同学怀疑度</span>
+                    <span class="stat-value" id="statClassmateRisk">-</span>
+                </div>
+            </div>
+            
+            <div class="achievements-list" id="achievementsList" style="display: none;">
+            </div>
+            
+            <div class="receipt-container" id="receiptContainer" style="display: none;">
+            </div>
+            
             <button class="restart-btn" id="restartBtn">再玩一次</button>
+            <button class="secondary-btn" id="generateReceiptBtn" style="display: none;">生成通关小票</button>
+        </div>
+    </div>
+
+    <div class="notification" id="achievementNotification">
+        <div class="notification-icon" id="achievementIcon">🏆</div>
+        <div class="notification-rarity" id="achievementRarity">传奇</div>
+        <h3 class="notification-title" id="achievementTitle">成就解锁！</h3>
+        <p class="notification-desc" id="achievementDesc">描述</p>
+        <button class="notification-btn" id="closeAchievementBtn">继续游戏</button>
+    </div>
+
+    <div class="notification" id="fragmentNotification">
+        <div class="notification-icon">📄</div>
+        <h3 class="notification-title">笔记碎片获得！</h3>
+        <p class="notification-desc" id="fragmentDesc">你获得了新的笔记碎片</p>
+        <button class="notification-btn" id="closeFragmentBtn">继续游戏</button>
+    </div>
+
+    <div class="special-event-overlay" id="specialEventOverlay">
+        <div class="special-event-card">
+            <div class="event-header">
+                <span class="event-icon" id="eventIcon">⚠️</span>
+                <h3 class="event-title" id="eventTitle">突发事件</h3>
+            </div>
+            <p class="event-description" id="eventDescription">描述</p>
+            <div class="event-options" id="eventOptions">
+            </div>
         </div>
     </div>
 
     <script>
         let sessionId = null;
         let selectedNoteType = null;
+        let selectedCharacter = null;
         let isWaitingForChoice = false;
         let isPanelCollapsed = false;
         let currentNoteContent = '';
+        let gameStats = {
+            character: '',
+            keystrokes: 0,
+            teacherRisk: 0,
+            classmateRisk: 0
+        };
 
         const noteTypeNames = {
             'math': '高等数学笔记',
@@ -560,24 +1112,68 @@
             }
         }
 
+        async function fetchCharacters() {
+            try {
+                const response = await fetch('/api/characters');
+                const data = await response.json();
+                return data.characters;
+            } catch (error) {
+                console.error('Failed to fetch characters:', error);
+                return [
+                    { id: 'player', name: '你', description: '普通学生', portrait: '👤' },
+                    { id: 'lin', name: '林小雨', description: '同桌', portrait: '👩' },
+                    { id: 'wang', name: '王大力', description: '体育生', portrait: '👨' },
+                    { id: 'chen', name: '陈书韵', description: '班长', portrait: '👧' }
+                ];
+            }
+        }
+
         async function initStartScreen() {
             const noteTypes = await fetchNoteTypes();
-            const selector = document.getElementById('noteTypeSelector');
+            const characters = await fetchCharacters();
             
-            selector.innerHTML = noteTypes.map(type => `
+            const charSelector = document.getElementById('characterSelector');
+            charSelector.innerHTML = characters.map(char => `
+                <div class="character-card" data-char="${char.id}">
+                    <div class="character-portrait">${char.portrait}</div>
+                    <div class="character-name">${char.name}</div>
+                    <div class="character-desc">${char.description}</div>
+                </div>
+            `).join('');
+
+            charSelector.querySelectorAll('.character-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    charSelector.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedCharacter = card.dataset.char;
+                    checkStartButton();
+                });
+            });
+
+            const noteSelector = document.getElementById('noteTypeSelector');
+            noteSelector.innerHTML = noteTypes.map(type => `
                 <button class="note-type-btn" data-type="${type.id}">
                     ${type.name}
                 </button>
             `).join('');
 
-            selector.querySelectorAll('.note-type-btn').forEach(btn => {
+            noteSelector.querySelectorAll('.note-type-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    selector.querySelectorAll('.note-type-btn').forEach(b => b.classList.remove('selected'));
+                    noteSelector.querySelectorAll('.note-type-btn').forEach(b => b.classList.remove('selected'));
                     btn.classList.add('selected');
                     selectedNoteType = btn.dataset.type;
-                    document.getElementById('startBtn').disabled = false;
+                    checkStartButton();
                 });
             });
+
+            updateFragmentPanel(0, 5);
+        }
+
+        function checkStartButton() {
+            const startBtn = document.getElementById('startBtn');
+            if (selectedCharacter && selectedNoteType) {
+                startBtn.disabled = false;
+            }
         }
 
         async function startGame() {
@@ -587,17 +1183,24 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ note_type: selectedNoteType })
+                    body: JSON.stringify({ 
+                        note_type: selectedNoteType,
+                        character: selectedCharacter
+                    })
                 });
                 
                 const data = await response.json();
                 sessionId = data.session_id;
+                gameStats.character = data.character;
                 
                 document.getElementById('startScreen').classList.add('hidden');
                 document.getElementById('gameContainer').style.display = 'flex';
                 document.getElementById('editorSubtitle').textContent = noteTypeNames[selectedNoteType];
+                document.getElementById('riskPanel').style.display = 'block';
+                document.getElementById('fragmentPanel').style.display = 'block';
                 
                 updateProgress(data.progress, data.initial_node);
+                updateRiskDisplay(0, 0);
                 
                 setTimeout(() => {
                     document.getElementById('hintText').classList.add('visible');
@@ -616,6 +1219,7 @@
             if (!sessionId || isWaitingForChoice) return;
             
             try {
+                gameStats.keystrokes++;
                 const response = await fetch(`/api/keystroke/${sessionId}`, {
                     method: 'POST'
                 });
@@ -627,6 +1231,23 @@
                 }
                 
                 updateProgress(data.progress_percent, data.progress_description);
+                updateRiskDisplay(data.teacher_alertness, data.classmate_suspicion);
+                
+                gameStats.teacherRisk = data.teacher_alertness;
+                gameStats.classmateRisk = data.classmate_suspicion;
+                
+                if (data.achievement_unlocked) {
+                    showAchievementNotification(data.achievement_unlocked);
+                }
+                
+                if (data.note_fragment) {
+                    showFragmentNotification(data.note_fragment);
+                }
+                
+                if (data.special_event) {
+                    showSpecialEvent(data.special_event);
+                    return;
+                }
                 
                 if (data.is_choice && !data.game_ended) {
                     showChoices(data.options);
@@ -656,6 +1277,18 @@
                     hideChoices();
                     isWaitingForChoice = false;
                     updateProgress(data.progress, data.next_description);
+                    updateRiskDisplay(data.teacher_alertness, data.classmate_suspicion);
+                    
+                    gameStats.teacherRisk = data.teacher_alertness;
+                    gameStats.classmateRisk = data.classmate_suspicion;
+                    
+                    if (data.achievement_unlocked) {
+                        showAchievementNotification(data.achievement_unlocked);
+                    }
+                    
+                    if (data.note_fragment) {
+                        showFragmentNotification(data.note_fragment);
+                    }
                     
                     if (data.is_ending) {
                         showEnding(data.ending_type, data.next_description);
@@ -669,6 +1302,26 @@
                 
             } catch (error) {
                 console.error('Failed to make choice:', error);
+            }
+        }
+
+        async function handleSpecialEvent(choiceKey, eventType) {
+            try {
+                const response = await fetch(`/api/handle-special-event/${sessionId}?choice_key=${choiceKey}&event_type=${eventType}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    hideSpecialEvent();
+                    updateRiskDisplay(data.teacher_alertness, data.classmate_suspicion);
+                    gameStats.teacherRisk = data.teacher_alertness;
+                    gameStats.classmateRisk = data.classmate_suspicion;
+                }
+                
+            } catch (error) {
+                console.error('Failed to handle special event:', error);
             }
         }
 
@@ -715,6 +1368,27 @@
             document.getElementById('collapsedPercent').textContent = `${percent}%`;
         }
 
+        function updateRiskDisplay(teacherAlertness, classmateSuspicion) {
+            document.getElementById('teacherAlertness').textContent = `${teacherAlertness}%`;
+            document.getElementById('classmateSuspicion').textContent = `${classmateSuspicion}%`;
+            document.getElementById('teacherRiskBar').style.width = `${teacherAlertness}%`;
+            document.getElementById('classmateRiskBar').style.width = `${classmateSuspicion}%`;
+        }
+
+        function updateFragmentPanel(collected, total) {
+            const fragmentList = document.getElementById('fragmentList');
+            let html = '';
+            for (let i = 0; i < total; i++) {
+                if (i < collected) {
+                    html += '<div class="fragment-slot collected">📄</div>';
+                } else {
+                    html += '<div class="fragment-slot locked">?</div>';
+                }
+            }
+            fragmentList.innerHTML = html;
+            document.getElementById('fragmentCount').textContent = `${collected}/${total} 已收集`;
+        }
+
         function showChoices(options) {
             const optionsList = document.getElementById('optionsList');
             const choiceOptions = document.getElementById('choiceOptions');
@@ -743,7 +1417,62 @@
             document.getElementById('hintText').classList.remove('visible');
         }
 
-        function showEnding(endingType, description) {
+        function showAchievementNotification(achievement) {
+            const notification = document.getElementById('achievementNotification');
+            document.getElementById('achievementIcon').textContent = achievement.icon;
+            document.getElementById('achievementTitle').textContent = achievement.name;
+            document.getElementById('achievementDesc').textContent = achievement.description;
+            
+            const rarityEl = document.getElementById('achievementRarity');
+            const rarityMap = {
+                'common': { text: '普通', class: 'rarity-common' },
+                'uncommon': { text: '稀有', class: 'rarity-uncommon' },
+                'rare': { text: '史诗', class: 'rarity-rare' },
+                'legendary': { text: '传奇', class: 'rarity-legendary' }
+            };
+            
+            const rarity = rarityMap[achievement.rarity] || rarityMap['common'];
+            rarityEl.textContent = rarity.text;
+            rarityEl.className = `notification-rarity ${rarity.class}`;
+            
+            notification.classList.add('visible');
+        }
+
+        function showFragmentNotification(fragment) {
+            const notification = document.getElementById('fragmentNotification');
+            document.getElementById('fragmentDesc').textContent = `你获得了：${fragment.title}`;
+            notification.classList.add('visible');
+        }
+
+        function showSpecialEvent(event) {
+            const overlay = document.getElementById('specialEventOverlay');
+            document.getElementById('eventTitle').textContent = '突发事件！';
+            document.getElementById('eventDescription').textContent = event.description;
+            
+            const optionsList = document.getElementById('eventOptions');
+            optionsList.innerHTML = event.options.map((opt, index) => `
+                <div class="event-option" data-key="${opt.key}" data-event="${event.type}">
+                    <span class="event-option-key">${opt.key}</span>
+                    <span class="event-option-text">${opt.text}</span>
+                </div>
+            `).join('');
+            
+            optionsList.querySelectorAll('.event-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    handleSpecialEvent(opt.dataset.key, opt.dataset.event);
+                });
+            });
+            
+            overlay.classList.add('visible');
+            isWaitingForChoice = true;
+        }
+
+        function hideSpecialEvent() {
+            document.getElementById('specialEventOverlay').classList.remove('visible');
+            isWaitingForChoice = false;
+        }
+
+        async function showEnding(endingType, description) {
             const endingScreen = document.getElementById('endingScreen');
             const endingIcon = document.getElementById('endingIcon');
             const endingTitle = document.getElementById('endingTitle');
@@ -760,7 +1489,48 @@
             }
             
             endingDescription.textContent = description;
+            
+            document.getElementById('statCharacter').textContent = gameStats.character || '-';
+            document.getElementById('statKeystrokes').textContent = gameStats.keystrokes;
+            document.getElementById('statTeacherRisk').textContent = `${gameStats.teacherRisk}%`;
+            document.getElementById('statClassmateRisk').textContent = `${gameStats.classmateRisk}%`;
+            document.getElementById('endingStats').style.display = 'block';
+            
+            try {
+                const response = await fetch(`/api/game-summary/${sessionId}`);
+                const data = await response.json();
+                
+                if (data.achievements && data.achievements.length > 0) {
+                    const achievementsList = document.getElementById('achievementsList');
+                    achievementsList.innerHTML = data.achievements.map(ach => {
+                        let badgeClass = 'achievement-badge';
+                        if (ach.rarity === 'rare') badgeClass += ' rare';
+                        if (ach.rarity === 'legendary') badgeClass += ' legendary';
+                        return `<div class="${badgeClass}">${ach.icon} ${ach.name}</div>`;
+                    }).join('');
+                    achievementsList.style.display = 'flex';
+                }
+                
+                updateFragmentPanel(data.collected_fragments.length, data.total_fragments);
+            } catch (error) {
+                console.error('Failed to fetch game summary:', error);
+            }
+            
+            document.getElementById('generateReceiptBtn').style.display = 'inline-block';
             endingScreen.classList.add('visible');
+        }
+
+        async function generateReceipt() {
+            try {
+                const response = await fetch(`/api/generate-receipt/${sessionId}`);
+                const data = await response.json();
+                
+                const receiptContainer = document.getElementById('receiptContainer');
+                receiptContainer.innerHTML = `<pre style="white-space: pre-wrap; margin: 0;">${data.receipt}</pre>`;
+                receiptContainer.style.display = 'block';
+            } catch (error) {
+                console.error('Failed to generate receipt:', error);
+            }
         }
 
         function hideEnding() {
@@ -770,8 +1540,15 @@
         function restartGame() {
             sessionId = null;
             selectedNoteType = null;
+            selectedCharacter = null;
             isWaitingForChoice = false;
             currentNoteContent = '';
+            gameStats = {
+                character: '',
+                keystrokes: 0,
+                teacherRisk: 0,
+                classmateRisk: 0
+            };
             
             hideEnding();
             hideChoices();
@@ -783,14 +1560,26 @@
             document.getElementById('editorContent').appendChild(cursor);
             
             document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('riskPanel').style.display = 'none';
+            document.getElementById('fragmentPanel').style.display = 'none';
             document.getElementById('startScreen').classList.remove('hidden');
             document.getElementById('startBtn').disabled = true;
             
             document.querySelectorAll('.note-type-btn').forEach(btn => {
                 btn.classList.remove('selected');
             });
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            document.getElementById('endingStats').style.display = 'none';
+            document.getElementById('achievementsList').style.display = 'none';
+            document.getElementById('receiptContainer').style.display = 'none';
+            document.getElementById('generateReceiptBtn').style.display = 'none';
             
             updateProgress(0, '选择笔记类型开始游戏');
+            updateRiskDisplay(0, 0);
+            updateFragmentPanel(0, 5);
         }
 
         function togglePanel() {
@@ -815,6 +1604,35 @@
         document.addEventListener('keydown', async (e) => {
             if (!sessionId) return;
             
+            const eventOverlay = document.getElementById('specialEventOverlay');
+            if (eventOverlay.classList.contains('visible')) {
+                const key = e.key;
+                const option = eventOverlay.querySelector(`.event-option[data-key="${key}"]`);
+                if (option) {
+                    e.preventDefault();
+                    await handleSpecialEvent(option.dataset.key, option.dataset.event);
+                }
+                return;
+            }
+            
+            const achievementNotif = document.getElementById('achievementNotification');
+            if (achievementNotif.classList.contains('visible')) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    achievementNotif.classList.remove('visible');
+                }
+                return;
+            }
+            
+            const fragmentNotif = document.getElementById('fragmentNotification');
+            if (fragmentNotif.classList.contains('visible')) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fragmentNotif.classList.remove('visible');
+                }
+                return;
+            }
+            
             if (isWaitingForChoice) {
                 const key = e.key;
                 if (['1', '2', '3', '4'].includes(key)) {
@@ -834,6 +1652,13 @@
         document.getElementById('restartBtn').addEventListener('click', restartGame);
         document.getElementById('collapseBtn').addEventListener('click', togglePanel);
         document.getElementById('collapsedPanel').addEventListener('click', togglePanel);
+        document.getElementById('closeAchievementBtn').addEventListener('click', () => {
+            document.getElementById('achievementNotification').classList.remove('visible');
+        });
+        document.getElementById('closeFragmentBtn').addEventListener('click', () => {
+            document.getElementById('fragmentNotification').classList.remove('visible');
+        });
+        document.getElementById('generateReceiptBtn').addEventListener('click', generateReceipt);
 
         initStartScreen();
     </script>

@@ -1,10 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import os
 import uvicorn
+import uuid
+from datetime import datetime
 
 app = FastAPI()
 
@@ -14,11 +16,13 @@ if not os.path.exists(STATIC_DIR):
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+
 class NoteType:
     MATH = "math"
     ENGLISH = "english"
     PHYSICS = "physics"
     HISTORY = "history"
+
 
 NOTE_CONTENTS = {
     NoteType.MATH: """第一章 函数与极限
@@ -413,11 +417,62 @@ F_n = ma_n = m v²/R
 """
 }
 
+
+class Character:
+    def __init__(self, char_id: str, name: str, description: str, 
+                 portrait: str, hidden_goal: str, personality: Dict[str, int]):
+        self.char_id = char_id
+        self.name = name
+        self.description = description
+        self.portrait = portrait
+        self.hidden_goal = hidden_goal
+        self.personality = personality
+
+
+CHARACTERS = {
+    "player": Character(
+        char_id="player",
+        name="你",
+        description="一个想逃离课堂的普通学生",
+        portrait="👤",
+        hidden_goal="成功逃离学校",
+        personality={"bravery": 5, "wisdom": 5, "charisma": 5}
+    ),
+    "lin": Character(
+        char_id="lin",
+        name="林小雨",
+        description="你的同桌，学习认真但有点叛逆",
+        portrait="👩",
+        hidden_goal="拿到学生会主席的推荐信",
+        personality={"bravery": 3, "wisdom": 7, "charisma": 6}
+    ),
+    "wang": Character(
+        char_id="wang",
+        name="王大力",
+        description="坐在你后面的体育生，性格豪爽",
+        portrait="👨",
+        hidden_goal="逃离枯燥的课堂去练球",
+        personality={"bravery": 9, "wisdom": 3, "charisma": 5}
+    ),
+    "chen": Character(
+        char_id="chen",
+        name="陈书韵",
+        description="班长，成绩优秀但有点内向",
+        portrait="👧",
+        hidden_goal="保护你不被老师发现",
+        personality={"bravery": 4, "wisdom": 8, "charisma": 7}
+    )
+}
+
+
 class StoryNode:
-    def __init__(self, node_id: int, description: str, progress: int, 
+    def __init__(self, node_id: int, description: str, progress: int,
                  is_choice: bool = False, options: List[Dict] = None,
                  next_node: int = None, is_ending: bool = False,
-                 ending_type: str = None):
+                 ending_type: str = None, character: str = None,
+                 risk_modifier: Dict[str, int] = None,
+                 special_event: str = None, achievement: str = None,
+                 note_fragment: str = None):
         self.node_id = node_id
         self.description = description
         self.progress = progress
@@ -426,222 +481,339 @@ class StoryNode:
         self.next_node = next_node
         self.is_ending = is_ending
         self.ending_type = ending_type
+        self.character = character
+        self.risk_modifier = risk_modifier or {"teacher": 0, "classmate": 0}
+        self.special_event = special_event
+        self.achievement = achievement
+        self.note_fragment = note_fragment
 
-STORY_NODES = {
-    0: StoryNode(
-        node_id=0,
-        description="你正在数学课上，老师在讲台上滔滔不绝地讲着微积分。你看了看窗外，今天的天气真好，可你却被困在这无聊的教室里。你的目光转向了教室的后门...",
-        progress=0,
-        next_node=1
+
+def create_story_nodes():
+    base_nodes = {
+        0: StoryNode(
+            node_id=0,
+            description="你正在数学课上，老师在讲台上滔滔不绝地讲着微积分。你看了看窗外，今天的天气真好，可你却被困在这无聊的教室里。你的目光转向了教室的后门...",
+            progress=0,
+            next_node=1,
+            risk_modifier={"teacher": 0, "classmate": 0}
+        ),
+        1: StoryNode(
+            node_id=1,
+            description="你假装认真地记着笔记，心里却在盘算着如何溜出去。离下课还有30分钟，但你已经迫不及待了。你注意到老师正在黑板上写板书，这可能是个机会...",
+            progress=5,
+            next_node=2
+        ),
+        2: StoryNode(
+            node_id=2,
+            description="突然，你的同桌林小雨用胳膊碰了碰你，小声说：'老师刚才看了你好几次，你注意点。'她的眼神有些担忧...",
+            progress=10,
+            character="lin",
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "感谢她的提醒，继续假装记笔记", "next_node": 3, "risk_modifier": {"teacher": -2, "classmate": -1}},
+                {"key": "2", "text": "趁机问她有没有逃课的好办法", "next_node": 4, "risk_modifier": {"teacher": 5, "classmate": 3}, "character_event": "lin"},
+                {"key": "3", "text": "不理她，继续观察老师", "next_node": 5, "risk_modifier": {"teacher": 3, "classmate": 5}}
+            ],
+            note_fragment="math_chapter1_part1"
+        ),
+        3: StoryNode(
+            node_id=3,
+            description="你向林小雨点了点头，继续假装认真记笔记。老师的目光从你身上掠过，没有停留太久。你松了一口气，但知道这招不能用太多次...",
+            progress=15,
+            next_node=6
+        ),
+        4: StoryNode(
+            node_id=4,
+            description="林小雨惊讶地看着你，然后压低声音说：'你疯了？现在是班主任的课！'她犹豫了一下，'不过...我听说后门今天没锁，老师转身写板书的时候可以试试...'她的声音越来越小。",
+            progress=15,
+            character="lin",
+            next_node=6,
+            achievement="confidant"
+        ),
+        5: StoryNode(
+            node_id=5,
+            description="你没有理会林小雨的提醒，继续观察着老师。突然，你发现老师的目光似乎在向你这边扫来...",
+            progress=12,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "假装捡笔，弯腰躲避老师的目光", "next_node": 6, "risk_modifier": {"teacher": -3, "classmate": 0}},
+                {"key": "2", "text": "举手上厕所，趁机离开教室", "next_node": 7, "risk_modifier": {"teacher": 8, "classmate": 5}}
+            ]
+        ),
+        6: StoryNode(
+            node_id=6,
+            description="你继续假装记笔记，但心中更加急切了。前面的同学在黑板上做题，老师正在耐心指导。后门似乎没有关紧，一道微风吹过，吹动了窗帘...",
+            progress=18,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "趁老师不注意，悄悄向后门移动", "next_node": 7, "risk_modifier": {"teacher": 10, "classmate": 5}},
+                {"key": "2", "text": "继续等待更好的机会", "next_node": 8, "risk_modifier": {"teacher": -2, "classmate": 0}}
+            ]
+        ),
+        7: StoryNode(
+            node_id=7,
+            description="你成功离开了教室！走廊里很安静，看起来大家都在上课。你快速向楼梯口走去，但你听到了脚步声——是教导主任！",
+            progress=25,
+            special_event="dean_encounter",
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "躲进旁边的男/女厕所", "next_node": 9, "risk_modifier": {"teacher": 5, "classmate": 0}},
+                {"key": "2", "text": "假装去教务处送作业", "next_node": 10, "risk_modifier": {"teacher": 3, "classmate": 0}}
+            ],
+            note_fragment="math_chapter1_part2"
+        ),
+        8: StoryNode(
+            node_id=8,
+            description="你决定继续等待。那个同学终于做完了题，走回了座位。老师开始讲解这道题，似乎比刚才更加投入。你觉得自己快要按捺不住了...",
+            progress=22,
+            next_node=11
+        ),
+        9: StoryNode(
+            node_id=9,
+            description="你冲进厕所隔间，屏住呼吸。教导主任的脚步声越来越近，然后停住了。你听到他在门外打电话：'是的校长，我在检查...'几分钟后，脚步声远去了。",
+            progress=35,
+            next_node=12,
+            achievement="hiding_master"
+        ),
+        10: StoryNode(
+            node_id=10,
+            description="你硬着头皮向教导主任走去，手里拿着刚从书包里掏出来的作业本。'主任好，我去教务处送作业。'教导主任看了你一眼，点了点头。你快步走过，后背已经湿透了。",
+            progress=30,
+            next_node=13
+        ),
+        11: StoryNode(
+            node_id=11,
+            description="你再也等不了了。你注意到老师正背对着全班同学在黑板上写着什么。这是千载难逢的机会！你的心跳加速，准备行动...",
+            progress=28,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "直接向后门冲刺", "next_node": 14, "risk_modifier": {"teacher": 20, "classmate": 10}},
+                {"key": "2", "text": "从侧门慢慢溜出去", "next_node": 7, "risk_modifier": {"teacher": 8, "classmate": 3}}
+            ]
+        ),
+        12: StoryNode(
+            node_id=12,
+            description="你从厕所出来，走廊里空无一人。你快速走向楼梯口，下楼时遇到了几个正在打闹的低年级学生。他们没有注意到你。你走到了一楼大厅...",
+            progress=45,
+            next_node=15
+        ),
+        13: StoryNode(
+            node_id=13,
+            description="你快步走下楼梯，来到一楼。教学楼的大门就在前方，但门口有个保安正在看报纸。你需要想办法出去...",
+            progress=40,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "直接走出去，假装是值日生", "next_node": 15, "risk_modifier": {"teacher": 5, "classmate": 0}},
+                {"key": "2", "text": "从侧门绕出去", "next_node": 16, "risk_modifier": {"teacher": -3, "classmate": 0}}
+            ]
+        ),
+        14: StoryNode(
+            node_id=14,
+            description="你不顾一切地冲出教室，但刚跑到走廊就被闻讯赶来的班主任抓住了。'逃课？跟我去教务处！'你的越狱计划失败了。",
+            progress=25,
+            is_ending=True,
+            ending_type="caught",
+            achievement="failed_attempt"
+        ),
+        15: StoryNode(
+            node_id=15,
+            description="你深吸一口气，整理了一下衣服，故作镇定地向大门走去。保安抬头看了你一眼，你挤出一个微笑。'同学，现在是上课时间，你去哪里？'保安问道...",
+            progress=50,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": '假装痛苦："我肚子疼，要去医务室"', "next_node": 17, "risk_modifier": {"teacher": 3, "classmate": 0}},
+                {"key": "2", "text": '理直气壮："我是学生会的，有急事"', "next_node": 18, "risk_modifier": {"teacher": 15, "classmate": 5}}
+            ],
+            note_fragment="math_chapter2_part1"
+        ),
+        16: StoryNode(
+            node_id=16,
+            description="你绕到教学楼的侧门，这里平时很少有人经过。门没锁！你小心翼翼地推开门，外面就是停车场。你成功地走出了教学楼！",
+            progress=55,
+            next_node=19
+        ),
+        17: StoryNode(
+            node_id=17,
+            description="你捂着肚子，眉头紧皱，表情痛苦不堪。保安被你的演技骗到了，连忙说：'那快去快去，需要我扶你吗？'你摇摇头，快步走出了大门。",
+            progress=60,
+            next_node=19,
+            achievement="master_actor"
+        ),
+        18: StoryNode(
+            node_id=18,
+            description="你的谎言被揭穿了。保安把你送到了教务处，你的班主任很快就赶来了。逃课记过处分是免不了的。你的越狱计划彻底失败了。",
+            progress=45,
+            is_ending=True,
+            ending_type="caught"
+        ),
+        19: StoryNode(
+            node_id=19,
+            description="你终于走出了教学楼！阳光洒在你身上，你感到前所未有的自由。但学校大门还在前方，那里肯定有更多保安。你环顾四周，发现有几条路可选...",
+            progress=65,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "从学校正门走出去，假装是放学", "next_node": 20, "risk_modifier": {"teacher": 10, "classmate": 0}},
+                {"key": "2", "text": "翻墙", "next_node": 21, "risk_modifier": {"teacher": 15, "classmate": 0}},
+                {"key": "3", "text": "从自行车道混出去", "next_node": 22, "risk_modifier": {"teacher": 5, "classmate": 0}}
+            ],
+            note_fragment="math_chapter2_part2"
+        ),
+        20: StoryNode(
+            node_id=20,
+            description="你走向学校正门，那里确实有几个保安在站岗。你故作镇定地继续走着，假装在打电话。一个保安拦住了你：'同学，现在还没到放学时间...'你该如何应对？",
+            progress=70,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": '继续假装打电话："好好好，张老师我马上就到"', "next_node": 23, "risk_modifier": {"teacher": 5, "classmate": 0}},
+                {"key": "2", "text": "拔腿就跑", "next_node": 24, "risk_modifier": {"teacher": 25, "classmate": 10}}
+            ]
+        ),
+        21: StoryNode(
+            node_id=21,
+            description="你观察了一下围墙的高度，大概两米多，上面还有些铁丝网。你发现一个角落有棵大树，树枝似乎可以够到墙顶。但翻墙有风险...",
+            progress=70,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "借助大树翻墙", "next_node": 25, "risk_modifier": {"teacher": 10, "classmate": 0}},
+                {"key": "2", "text": "还是另寻他路吧", "next_node": 22, "risk_modifier": {"teacher": -2, "classmate": 0}}
+            ]
+        ),
+        22: StoryNode(
+            node_id=22,
+            description="你来到自行车道，这里是学生骑车进出的地方。现在正好是午休前的时间，有一些走读生正在骑车离校。你决定...",
+            progress=68,
+            is_choice=True,
+            options=[
+                {"key": "1", "text": "假装推车混在学生中走出去", "next_node": 26, "risk_modifier": {"teacher": 3, "classmate": 0}},
+                {"key": "2", "text": "请求一个走读生带你出去", "next_node": 27, "risk_modifier": {"teacher": 2, "classmate": 0}}
+            ]
+        ),
+        23: StoryNode(
+            node_id=23,
+            description="你一边假装打电话一边继续往外走，语气自然得连自己都相信了。保安将信将疑，但最终还是没有继续拦你。你就这样大摇大摆地走出了学校正门！",
+            progress=85,
+            next_node=28
+        ),
+        24: StoryNode(
+            node_id=24,
+            description="你逃跑失败，被保安抓住了。不仅如此，你的莽撞行为还引来了路人的围观。你的学校生涯将因为这次冲动而留下一个大大的污点。越狱失败！",
+            progress=75,
+            is_ending=True,
+            ending_type="caught"
+        ),
+        25: StoryNode(
+            node_id=25,
+            description="你深吸一口气，开始攀爬那棵大树。树枝虽然有点摇晃，但还算结实。你爬到足够高的位置，纵身一跃抓住了墙头。铁丝网有点刮人，但你顾不得那么多，翻了过去...",
+            progress=90,
+            next_node=28,
+            achievement="wall_climber"
+        ),
+        26: StoryNode(
+            node_id=26,
+            description="你快步走进自行车道，随手从一排自行车中推出一辆（你假装是自己的），混在走读生中向外走去。保安只是例行公事地看了一眼，没有注意到你。你就这样顺利地出去了！",
+            progress=85,
+            next_node=28
+        ),
+        27: StoryNode(
+            node_id=27,
+            description='你拉住一个正在骑车的男生："同学，能不能带我一程？我有点急事。"那个男生犹豫了一下，但看到你焦急的表情，还是同意了。你坐在后座上，顺利地通过了校门！',
+            progress=80,
+            next_node=28,
+            achievement="charmer"
+        ),
+        28: StoryNode(
+            node_id=28,
+            description="恭喜你！你成功逃脱了！这次惊险的越狱经历将成为你学生时代最刺激的回忆之一。但记住，逃课可不是好习惯哦。下次可别这么做了！",
+            progress=100,
+            is_ending=True,
+            ending_type="success",
+            achievement="escape_master",
+            note_fragment="math_chapter3_complete"
+        )
+    }
+    return base_nodes
+
+
+STORY_NODES = create_story_nodes()
+
+
+class Achievement:
+    def __init__(self, ach_id: str, name: str, description: str, 
+                 icon: str, rarity: str = "common"):
+        self.ach_id = ach_id
+        self.name = name
+        self.description = description
+        self.icon = icon
+        self.rarity = rarity
+
+
+ACHIEVEMENTS = {
+    "escape_master": Achievement(
+        "escape_master", "越狱大师", "成功逃离学校", "🏆", "legendary"
     ),
-    1: StoryNode(
-        node_id=1,
-        description="你假装认真地记着笔记，心里却在盘算着如何溜出去。离下课还有30分钟，但你已经迫不及待了。你注意到老师正在黑板上写板书，这可能是个机会...",
-        progress=5,
-        next_node=2
+    "hiding_master": Achievement(
+        "hiding_master", "隐身达人", "在厕所成功躲避教导主任", "🚽", "rare"
     ),
-    2: StoryNode(
-        node_id=2,
-        description="你正在思考对策，突然听到老师说：'接下来请一位同学上来做这道题。'你的心猛地一跳，老师的目光似乎在向你这边扫来...",
-        progress=10,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": "假装捡笔，弯腰躲避老师的目光", "next_node": 3},
-            {"key": "2", "text": "举手上厕所，趁机离开教室", "next_node": 4}
-        ]
+    "master_actor": Achievement(
+        "master_actor", "奥斯卡影帝", "用精湛的演技骗过保安", "🎭", "rare"
     ),
-    3: StoryNode(
-        node_id=3,
-        description="你迅速弯腰，假装在地上捡笔。老师的目光从你身上掠过，点了坐在你前面的同学。你松了一口气，但知道这招不能用太多次...",
-        progress=15,
-        next_node=5
+    "wall_climber": Achievement(
+        "wall_climber", "飞檐走壁", "成功翻墙逃离", "🧗", "rare"
     ),
-    4: StoryNode(
-        node_id=4,
-        description="你果断举手：'老师，我想去厕所。'老师皱了皱眉，但还是点了点头。你强装镇定地走出教室，感觉自由就在眼前！",
-        progress=20,
-        next_node=6
+    "charmer": Achievement(
+        "charmer", "魅力四射", "成功说服同学带你出门", "✨", "uncommon"
     ),
-    5: StoryNode(
-        node_id=5,
-        description="你继续假装记笔记，但心中更加急切了。那位同学在黑板上做题，老师正在耐心指导。后门似乎没有关紧，一道微风吹过，吹动了窗帘...",
-        progress=18,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": "趁老师不注意，悄悄向后门移动", "next_node": 6},
-            {"key": "2", "text": "继续等待更好的机会", "next_node": 7}
-        ]
+    "confidant": Achievement(
+        "confidant", "获得信任", "让同桌告诉你逃课的秘密", "💝", "uncommon"
     ),
-    6: StoryNode(
-        node_id=6,
-        description="你成功离开了教室！走廊里很安静，看起来大家都在上课。你快速向楼梯口走去，但你听到了脚步声——是教导主任！",
-        progress=25,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": "躲进旁边的男/女厕所", "next_node": 8},
-            {"key": "2", "text": "假装去教务处送作业", "next_node": 9}
-        ]
+    "failed_attempt": Achievement(
+        "failed_attempt", "失败是成功之母", "第一次越狱失败", "😢", "common"
     ),
-    7: StoryNode(
-        node_id=7,
-        description="你决定继续等待。那个同学终于做完了题，走回了座位。老师开始讲解这道题，似乎比刚才更加投入。你觉得自己快要按捺不住了...",
-        progress=22,
-        next_node=10
+    "risk_taker": Achievement(
+        "risk_taker", "冒险家", "在高风险情况下成功逃离", "🎲", "rare"
     ),
-    8: StoryNode(
-        node_id=8,
-        description="你冲进厕所隔间，屏住呼吸。教导主任的脚步声越来越近，然后停住了。你听到他在门外打电话：'是的校长，我在检查...'几分钟后，脚步声远去了。",
-        progress=35,
-        next_node=11
+    "collector": Achievement(
+        "collector", "笔记收藏家", "收集所有笔记碎片", "📚", "legendary"
     ),
-    9: StoryNode(
-        node_id=9,
-        description="你硬着头皮向教导主任走去，手里拿着刚从书包里掏出来的作业本。'主任好，我去教务处送作业。'教导主任看了你一眼，点了点头。你快步走过，后背已经湿透了。",
-        progress=30,
-        next_node=12
-    ),
-    10: StoryNode(
-        node_id=10,
-        description="你再也等不了了。你注意到老师正背对着全班同学在黑板上写着什么。这是千载难逢的机会！你的心跳加速，准备行动...",
-        progress=28,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": "直接向后门冲刺", "next_node": 13},
-            {"key": "2", "text": "从侧门慢慢溜出去", "next_node": 6}
-        ]
-    ),
-    11: StoryNode(
-        node_id=11,
-        description="你从厕所出来，走廊里空无一人。你快速走向楼梯口，下楼时遇到了几个正在打闹的低年级学生。他们没有注意到你。你走到了一楼大厅...",
-        progress=45,
-        next_node=14
-    ),
-    12: StoryNode(
-        node_id=12,
-        description="你快步走下楼梯，来到一楼。教学楼的大门就在前方，但门口有个保安正在看报纸。你需要想办法出去...",
-        progress=40,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": "直接走出去，假装是值日生", "next_node": 14},
-            {"key": "2", "text": "从侧门绕出去", "next_node": 15}
-        ]
-    ),
-    13: StoryNode(
-        node_id=13,
-        description="你不顾一切地冲出教室，但刚跑到走廊就被闻讯赶来的班主任抓住了。'逃课？跟我去教务处！'你的越狱计划失败了。",
-        progress=25,
-        is_ending=True,
-        ending_type="caught"
-    ),
-    14: StoryNode(
-        node_id=14,
-        description="你深吸一口气，整理了一下衣服，故作镇定地向大门走去。保安抬头看了你一眼，你挤出一个微笑。'同学，现在是上课时间，你去哪里？'保安问道...",
-        progress=50,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": '假装痛苦："我肚子疼，要去医务室"', "next_node": 16},
-            {"key": "2", "text": '理直气壮："我是学生会的，有急事"', "next_node": 17}
-        ]
-    ),
-    15: StoryNode(
-        node_id=15,
-        description="你绕到教学楼的侧门，这里平时很少有人经过。门没锁！你小心翼翼地推开门，外面就是停车场。你成功地走出了教学楼！",
-        progress=55,
-        next_node=18
-    ),
-    16: StoryNode(
-        node_id=16,
-        description="你捂着肚子，眉头紧皱，表情痛苦不堪。保安被你的演技骗到了，连忙说：'那快去快去，需要我扶你吗？'你摇摇头，快步走出了大门。",
-        progress=60,
-        next_node=18
-    ),
-    17: StoryNode(
-        node_id=17,
-        description="你的谎言被揭穿了。保安把你送到了教务处，你的班主任很快就赶来了。逃课记过处分是免不了的。你的越狱计划彻底失败了。",
-        progress=45,
-        is_ending=True,
-        ending_type="caught"
-    ),
-    18: StoryNode(
-        node_id=18,
-        description="你终于走出了教学楼！阳光洒在你身上，你感到前所未有的自由。但学校大门还在前方，那里肯定有更多保安。你环顾四周，发现有几条路可选...",
-        progress=65,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": "从学校正门走出去，假装是放学", "next_node": 19},
-            {"key": "2", "text": "翻墙", "next_node": 20},
-            {"key": "3", "text": "从自行车道混出去", "next_node": 21}
-        ]
-    ),
-    19: StoryNode(
-        node_id=19,
-        description="你走向学校正门，那里确实有几个保安在站岗。你故作镇定地继续走着，假装在打电话。一个保安拦住了你：'同学，现在还没到放学时间...'你该如何应对？",
-        progress=70,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": '继续假装打电话："好好好，张老师我马上就到"', "next_node": 22},
-            {"key": "2", "text": "拔腿就跑", "next_node": 23}
-        ]
-    ),
-    20: StoryNode(
-        node_id=20,
-        description="你观察了一下围墙的高度，大概两米多，上面还有些铁丝网。你发现一个角落有棵大树，树枝似乎可以够到墙顶。但翻墙有风险...",
-        progress=70,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": "借助大树翻墙", "next_node": 24},
-            {"key": "2", "text": "还是另寻他路吧", "next_node": 21}
-        ]
-    ),
-    21: StoryNode(
-        node_id=21,
-        description="你来到自行车道，这里是学生骑车进出的地方。现在正好是午休前的时间，有一些走读生正在骑车离校。你决定...",
-        progress=68,
-        is_choice=True,
-        options=[
-            {"key": "1", "text": "假装推车混在学生中走出去", "next_node": 25},
-            {"key": "2", "text": "请求一个走读生带你出去", "next_node": 26}
-        ]
-    ),
-    22: StoryNode(
-        node_id=22,
-        description="你一边假装打电话一边继续往外走，语气自然得连自己都相信了。保安将信将疑，但最终还是没有继续拦你。你就这样大摇大摆地走出了学校正门！",
-        progress=85,
-        next_node=27
-    ),
-    23: StoryNode(
-        node_id=23,
-        description="你逃跑失败，被保安抓住了。不仅如此，你的莽撞行为还引来了路人的围观。你的学校生涯将因为这次冲动而留下一个大大的污点。越狱失败！",
-        progress=75,
-        is_ending=True,
-        ending_type="caught"
-    ),
-    24: StoryNode(
-        node_id=24,
-        description="你深吸一口气，开始攀爬那棵大树。树枝虽然有点摇晃，但还算结实。你爬到足够高的位置，纵身一跃抓住了墙头。铁丝网有点刮人，但你顾不得那么多，翻了过去...",
-        progress=90,
-        next_node=27
-    ),
-    25: StoryNode(
-        node_id=25,
-        description="你快步走进自行车道，随手从一排自行车中推出一辆（你假装是自己的），混在走读生中向外走去。保安只是例行公事地看了一眼，没有注意到你。你就这样顺利地出去了！",
-        progress=85,
-        next_node=27
-    ),
-    26: StoryNode(
-        node_id=26,
-        description='你拉住一个正在骑车的男生："同学，能不能带我一程？我有点急事。"那个男生犹豫了一下，但看到你焦急的表情，还是同意了。你坐在后座上，顺利地通过了校门！',
-        progress=80,
-        next_node=27
-    ),
-    27: StoryNode(
-        node_id=27,
-        description="恭喜你！你成功逃脱了！这次惊险的越狱经历将成为你学生时代最刺激的回忆之一。但记住，逃课可不是好习惯哦。下次可别这么做了！",
-        progress=100,
-        is_ending=True,
-        ending_type="success"
+    "perfect_escape": Achievement(
+        "perfect_escape", "完美越狱", "零风险值通关", "👑", "legendary"
     )
 }
+
+
+NOTE_FRAGMENTS = {
+    "math_chapter1_part1": {
+        "title": "第一章 函数与极限（上）",
+        "subject": "数学",
+        "content": "1.1 映射与函数\n一、集合\n1. 集合的概念\n具有某种特定性质的事物的总体称为集合。\n\n2. 集合的表示法\n列举法：把集合的全体元素一一列举出来。\n描述法：M = {x | x 具有性质 P}",
+        "progress_required": 0
+    },
+    "math_chapter1_part2": {
+        "title": "第一章 函数与极限（下）",
+        "subject": "数学",
+        "content": "1.2 数列的极限\n设 {x_n} 为一数列，如果存在常数 a...\n\n1.3 函数的极限\n设函数 f(x) 在点 x_0 的某一去心邻域内有定义...",
+        "progress_required": 25
+    },
+    "math_chapter2_part1": {
+        "title": "第二章 导数与微分（上）",
+        "subject": "数学",
+        "content": "2.1 导数概念\n一、引例\n1. 直线运动的速度\n设某点沿直线运动，位置 s = s(t)...",
+        "progress_required": 50
+    },
+    "math_chapter2_part2": {
+        "title": "第二章 导数与微分（下）",
+        "subject": "数学",
+        "content": "2.2 函数的求导法则\n定理1：如果函数 u = u(x) 及 v = v(x) 都在点 x 具有导数...\n\n(1) [u(x) ± v(x)]' = u'(x) ± v'(x)",
+        "progress_required": 65
+    },
+    "math_chapter3_complete": {
+        "title": "第三章 微分中值定理（完整）",
+        "subject": "数学",
+        "content": "3.1 微分中值定理\n一、罗尔定理\n定理1：如果函数 f(x) 满足三个条件...\n\n二、拉格朗日中值定理\n定理2：如果函数 f(x) 满足两个条件...",
+        "progress_required": 100
+    }
+}
+
 
 class GameState(BaseModel):
     note_type: str = NoteType.MATH
@@ -650,9 +822,19 @@ class GameState(BaseModel):
     keystroke_count: int = 0
     choice_made: bool = False
     game_ended: bool = False
+    character: str = "player"
+    teacher_alertness: int = 0
+    classmate_suspicion: int = 0
+    unlocked_achievements: List[str] = []
+    collected_fragments: List[str] = []
+    keystroke_times: List[float] = []
+    special_events_triggered: List[str] = []
+
 
 class StartGameRequest(BaseModel):
     note_type: str
+    character: str = "player"
+
 
 class GameUpdateResponse(BaseModel):
     text_to_add: str
@@ -663,8 +845,16 @@ class GameUpdateResponse(BaseModel):
     is_ending: bool
     ending_type: Optional[str]
     game_ended: bool
+    teacher_alertness: int
+    classmate_suspicion: int
+    character: Optional[str]
+    special_event: Optional[str]
+    achievement_unlocked: Optional[Dict[str, Any]]
+    note_fragment: Optional[Dict[str, Any]]
+
 
 active_sessions: Dict[str, GameState] = {}
+
 
 @app.get("/")
 async def read_index():
@@ -672,6 +862,7 @@ async def read_index():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return {"message": "Index file not found"}
+
 
 @app.get("/api/note-types")
 async def get_note_types():
@@ -684,12 +875,62 @@ async def get_note_types():
         ]
     }
 
+
+@app.get("/api/characters")
+async def get_characters():
+    return {
+        "characters": [
+            {
+                "id": char.char_id,
+                "name": char.name,
+                "description": char.description,
+                "portrait": char.portrait,
+                "hidden_goal": char.hidden_goal,
+                "personality": char.personality
+            }
+            for char in CHARACTERS.values()
+        ]
+    }
+
+
+@app.get("/api/achievements")
+async def get_achievements():
+    return {
+        "achievements": [
+            {
+                "id": ach.ach_id,
+                "name": ach.name,
+                "description": ach.description,
+                "icon": ach.icon,
+                "rarity": ach.rarity
+            }
+            for ach in ACHIEVEMENTS.values()
+        ]
+    }
+
+
+@app.get("/api/note-fragments")
+async def get_note_fragments():
+    return {
+        "fragments": [
+            {
+                "id": frag_id,
+                "title": frag["title"],
+                "subject": frag["subject"],
+                "progress_required": frag["progress_required"]
+            }
+            for frag_id, frag in NOTE_FRAGMENTS.items()
+        ]
+    }
+
+
 @app.post("/api/start-game")
 async def start_game(request: StartGameRequest):
     if request.note_type not in NOTE_CONTENTS:
         raise HTTPException(status_code=400, detail="Invalid note type")
+    if request.character not in CHARACTERS:
+        raise HTTPException(status_code=400, detail="Invalid character")
     
-    import uuid
     session_id = str(uuid.uuid4())
     
     active_sessions[session_id] = GameState(
@@ -698,14 +939,94 @@ async def start_game(request: StartGameRequest):
         note_index=0,
         keystroke_count=0,
         choice_made=False,
-        game_ended=False
+        game_ended=False,
+        character=request.character,
+        teacher_alertness=0,
+        classmate_suspicion=0,
+        unlocked_achievements=[],
+        collected_fragments=[],
+        keystroke_times=[]
     )
     
     return {
         "session_id": session_id,
         "initial_node": STORY_NODES[0].description,
-        "progress": 0
+        "progress": 0,
+        "character": CHARACTERS[request.character].name,
+        "teacher_alertness": 0,
+        "classmate_suspicion": 0
     }
+
+
+def calculate_risk_from_keystroke(keystroke_times: List[float]) -> Dict[str, int]:
+    if len(keystroke_times) < 5:
+        return {"teacher": 0, "classmate": 0}
+    
+    recent_times = keystroke_times[-5:]
+    avg_interval = sum(recent_times) / len(recent_times)
+    
+    teacher_risk = 0
+    classmate_risk = 0
+    
+    if avg_interval < 0.1:
+        teacher_risk += 2
+        classmate_risk += 1
+    elif avg_interval > 1.0:
+        teacher_risk -= 1
+    
+    variance = sum((t - avg_interval) ** 2 for t in recent_times) / len(recent_times)
+    if variance > 0.5:
+        teacher_risk += 1
+    
+    return {
+        "teacher": max(-5, min(100, teacher_risk)),
+        "classmate": max(-5, min(100, classmate_risk))
+    }
+
+
+def check_special_event(state: GameState) -> Optional[str]:
+    if state.teacher_alertness >= 70 and "teacher_suspected" not in state.special_events_triggered:
+        state.special_events_triggered.append("teacher_suspected")
+        return "teacher_suspected"
+    
+    if state.classmate_suspicion >= 60 and "classmate_noticed" not in state.special_events_triggered:
+        state.special_events_triggered.append("classmate_noticed")
+        return "classmate_noticed"
+    
+    if state.teacher_alertness >= 90 and "caught_imminent" not in state.special_events_triggered:
+        state.special_events_triggered.append("caught_imminent")
+        return "caught_imminent"
+    
+    return None
+
+
+SPECIAL_EVENTS = {
+    "teacher_suspected": {
+        "description": "⚠️ 【危险】老师似乎注意到了你！他的目光频繁地向你这边扫来。你最好放慢节奏，或者做些什么来分散他的注意力。",
+        "options": [
+            {"key": "1", "text": "假装咳嗽，分散老师注意力", "risk_modifier": {"teacher": -10, "classmate": 2}},
+            {"key": "2", "text": "举手问问题，表现得很认真", "risk_modifier": {"teacher": -15, "classmate": -5}},
+            {"key": "3", "text": "无视警告，继续按原计划", "risk_modifier": {"teacher": 10, "classmate": 5}}
+        ]
+    },
+    "classmate_noticed": {
+        "description": "👀 【警告】同桌在看你！你的异常行为引起了周围同学的注意。他们可能会报告老师，或者...你可以尝试拉拢他们。",
+        "options": [
+            {"key": "1", "text": "用眼神示意他们闭嘴", "risk_modifier": {"teacher": 5, "classmate": 5}},
+            {"key": "2", "text": "小声许诺好处", "risk_modifier": {"teacher": 8, "classmate": -10}},
+            {"key": "3", "text": "假装不知道，继续自己的事", "risk_modifier": {"teacher": 0, "classmate": 8}}
+        ]
+    },
+    "caught_imminent": {
+        "description": "🚨 【紧急】老师正在走过来！你必须立刻做出决定！",
+        "options": [
+            {"key": "1", "text": "快速低头假装写笔记", "risk_modifier": {"teacher": -5, "classmate": 0}},
+            {"key": "2", "text": "立刻向后门冲刺", "risk_modifier": {"teacher": 20, "classmate": 10}},
+            {"key": "3", "text": "假装肚子痛要去厕所", "risk_modifier": {"teacher": 0, "classmate": 5}}
+        ]
+    }
+}
+
 
 @app.post("/api/keystroke/{session_id}")
 async def process_keystroke(session_id: str):
@@ -723,7 +1044,13 @@ async def process_keystroke(session_id: str):
             options=[],
             is_ending=True,
             ending_type=None,
-            game_ended=True
+            game_ended=True,
+            teacher_alertness=state.teacher_alertness,
+            classmate_suspicion=state.classmate_suspicion,
+            character=state.character,
+            special_event=None,
+            achievement_unlocked=None,
+            note_fragment=None
         )
     
     current_node = STORY_NODES[state.current_node]
@@ -737,10 +1064,26 @@ async def process_keystroke(session_id: str):
             options=current_node.options,
             is_ending=False,
             ending_type=None,
-            game_ended=False
+            game_ended=False,
+            teacher_alertness=state.teacher_alertness,
+            classmate_suspicion=state.classmate_suspicion,
+            character=current_node.character,
+            special_event=None,
+            achievement_unlocked=None,
+            note_fragment=None
         )
     
     state.keystroke_count += 1
+    now = datetime.now().timestamp()
+    state.keystroke_times.append(now)
+    
+    if len(state.keystroke_times) > 10:
+        state.keystroke_times = state.keystroke_times[-10:]
+    
+    keystroke_risk = calculate_risk_from_keystroke(state.keystroke_times)
+    state.teacher_alertness = max(0, min(100, state.teacher_alertness + keystroke_risk["teacher"]))
+    state.classmate_suspicion = max(0, min(100, state.classmate_suspicion + keystroke_risk["classmate"]))
+    
     chars_per_keystroke = 3
     
     note_content = NOTE_CONTENTS[state.note_type]
@@ -753,8 +1096,8 @@ async def process_keystroke(session_id: str):
     
     progress_thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500]
     node_progress_map = {
-        50: 1, 100: 2, 150: 5, 200: 10, 250: 14,
-        300: 18, 350: 19, 400: 27
+        50: 1, 100: 2, 150: 6, 200: 11, 250: 15,
+        300: 19, 350: 20, 400: 28
     }
     
     if not current_node.is_choice and not current_node.is_ending:
@@ -764,10 +1107,76 @@ async def process_keystroke(session_id: str):
                     if STORY_NODES[state.current_node].next_node:
                         state.current_node = STORY_NODES[state.current_node].next_node
                         current_node = STORY_NODES[state.current_node]
+                        
+                        if current_node.risk_modifier:
+                            state.teacher_alertness = max(0, min(100, state.teacher_alertness + current_node.risk_modifier.get("teacher", 0)))
+                            state.classmate_suspicion = max(0, min(100, state.classmate_suspicion + current_node.risk_modifier.get("classmate", 0)))
+                        
+                        if current_node.note_fragment and current_node.note_fragment not in state.collected_fragments:
+                            state.collected_fragments.append(current_node.note_fragment)
+                        
+                        if current_node.achievement and current_node.achievement not in state.unlocked_achievements:
+                            state.unlocked_achievements.append(current_node.achievement)
+                        
                         break
+    
+    special_event = check_special_event(state)
+    achievement_unlocked = None
+    note_fragment = None
+    
+    if current_node.achievement and current_node.achievement not in state.unlocked_achievements:
+        state.unlocked_achievements.append(current_node.achievement)
+        ach = ACHIEVEMENTS.get(current_node.achievement)
+        if ach:
+            achievement_unlocked = {
+                "id": ach.ach_id,
+                "name": ach.name,
+                "description": ach.description,
+                "icon": ach.icon,
+                "rarity": ach.rarity
+            }
+    
+    if current_node.note_fragment and current_node.note_fragment not in state.collected_fragments:
+        state.collected_fragments.append(current_node.note_fragment)
+        frag = NOTE_FRAGMENTS.get(current_node.note_fragment)
+        if frag:
+            note_fragment = {
+                "id": current_node.note_fragment,
+                "title": frag["title"],
+                "subject": frag["subject"],
+                "content": frag["content"]
+            }
     
     if current_node.is_ending:
         state.game_ended = True
+        
+        if current_node.ending_type == "success":
+            if state.teacher_alertness <= 10 and state.classmate_suspicion <= 10:
+                if "perfect_escape" not in state.unlocked_achievements:
+                    state.unlocked_achievements.append("perfect_escape")
+                    achievement_unlocked = {
+                        "id": "perfect_escape",
+                        "name": "完美越狱",
+                        "description": "零风险值通关",
+                        "icon": "👑",
+                        "rarity": "legendary"
+                    }
+            
+            if state.teacher_alertness >= 50:
+                if "risk_taker" not in state.unlocked_achievements:
+                    state.unlocked_achievements.append("risk_taker")
+                    achievement_unlocked = {
+                        "id": "risk_taker",
+                        "name": "冒险家",
+                        "description": "在高风险情况下成功逃离",
+                        "icon": "🎲",
+                        "rarity": "rare"
+                    }
+        
+        if len(state.collected_fragments) >= len(NOTE_FRAGMENTS):
+            if "collector" not in state.unlocked_achievements:
+                state.unlocked_achievements.append("collector")
+        
         return GameUpdateResponse(
             text_to_add=text_to_add,
             progress_description=current_node.description,
@@ -776,8 +1185,22 @@ async def process_keystroke(session_id: str):
             options=[],
             is_ending=True,
             ending_type=current_node.ending_type,
-            game_ended=True
+            game_ended=True,
+            teacher_alertness=state.teacher_alertness,
+            classmate_suspicion=state.classmate_suspicion,
+            character=state.character,
+            special_event=None,
+            achievement_unlocked=achievement_unlocked,
+            note_fragment=note_fragment
         )
+    
+    special_event_data = None
+    if special_event and special_event in SPECIAL_EVENTS:
+        special_event_data = {
+            "type": special_event,
+            "description": SPECIAL_EVENTS[special_event]["description"],
+            "options": SPECIAL_EVENTS[special_event]["options"]
+        }
     
     return GameUpdateResponse(
         text_to_add=text_to_add,
@@ -787,8 +1210,15 @@ async def process_keystroke(session_id: str):
         options=current_node.options if (current_node.is_choice and not state.choice_made) else [],
         is_ending=False,
         ending_type=None,
-        game_ended=False
+        game_ended=False,
+        teacher_alertness=state.teacher_alertness,
+        classmate_suspicion=state.classmate_suspicion,
+        character=current_node.character,
+        special_event=special_event_data,
+        achievement_unlocked=achievement_unlocked,
+        note_fragment=note_fragment
     )
+
 
 @app.post("/api/make-choice/{session_id}")
 async def make_choice(session_id: str, choice_key: str):
@@ -806,7 +1236,41 @@ async def make_choice(session_id: str, choice_key: str):
             state.current_node = option["next_node"]
             state.choice_made = False
             
+            if "risk_modifier" in option:
+                state.teacher_alertness = max(0, min(100, state.teacher_alertness + option["risk_modifier"].get("teacher", 0)))
+                state.classmate_suspicion = max(0, min(100, state.classmate_suspicion + option["risk_modifier"].get("classmate", 0)))
+            
             next_node = STORY_NODES[state.current_node]
+            
+            achievement_unlocked = None
+            note_fragment = None
+            
+            if next_node.risk_modifier:
+                state.teacher_alertness = max(0, min(100, state.teacher_alertness + next_node.risk_modifier.get("teacher", 0)))
+                state.classmate_suspicion = max(0, min(100, state.classmate_suspicion + next_node.risk_modifier.get("classmate", 0)))
+            
+            if next_node.achievement and next_node.achievement not in state.unlocked_achievements:
+                state.unlocked_achievements.append(next_node.achievement)
+                ach = ACHIEVEMENTS.get(next_node.achievement)
+                if ach:
+                    achievement_unlocked = {
+                        "id": ach.ach_id,
+                        "name": ach.name,
+                        "description": ach.description,
+                        "icon": ach.icon,
+                        "rarity": ach.rarity
+                    }
+            
+            if next_node.note_fragment and next_node.note_fragment not in state.collected_fragments:
+                state.collected_fragments.append(next_node.note_fragment)
+                frag = NOTE_FRAGMENTS.get(next_node.note_fragment)
+                if frag:
+                    note_fragment = {
+                        "id": next_node.note_fragment,
+                        "title": frag["title"],
+                        "subject": frag["subject"],
+                        "content": frag["content"]
+                    }
             
             return {
                 "success": True,
@@ -815,10 +1279,146 @@ async def make_choice(session_id: str, choice_key: str):
                 "is_ending": next_node.is_ending,
                 "ending_type": next_node.ending_type,
                 "is_choice": next_node.is_choice,
-                "options": next_node.options
+                "options": next_node.options,
+                "teacher_alertness": state.teacher_alertness,
+                "classmate_suspicion": state.classmate_suspicion,
+                "achievement_unlocked": achievement_unlocked,
+                "note_fragment": note_fragment
             }
     
     raise HTTPException(status_code=400, detail="Invalid choice key")
+
+
+@app.post("/api/handle-special-event/{session_id}")
+async def handle_special_event(session_id: str, choice_key: str, event_type: str):
+    if session_id not in active_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    state = active_sessions[session_id]
+    
+    if event_type not in SPECIAL_EVENTS:
+        raise HTTPException(status_code=400, detail="Invalid event type")
+    
+    event = SPECIAL_EVENTS[event_type]
+    
+    for option in event["options"]:
+        if option["key"] == choice_key:
+            if "risk_modifier" in option:
+                state.teacher_alertness = max(0, min(100, state.teacher_alertness + option["risk_modifier"].get("teacher", 0)))
+                state.classmate_suspicion = max(0, min(100, state.classmate_suspicion + option["risk_modifier"].get("classmate", 0)))
+            
+            return {
+                "success": True,
+                "teacher_alertness": state.teacher_alertness,
+                "classmate_suspicion": state.classmate_suspicion,
+                "event_handled": event_type
+            }
+    
+    raise HTTPException(status_code=400, detail="Invalid choice key")
+
+
+@app.get("/api/game-summary/{session_id}")
+async def get_game_summary(session_id: str):
+    if session_id not in active_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    state = active_sessions[session_id]
+    
+    achievements = []
+    for ach_id in state.unlocked_achievements:
+        ach = ACHIEVEMENTS.get(ach_id)
+        if ach:
+            achievements.append({
+                "id": ach.ach_id,
+                "name": ach.name,
+                "description": ach.description,
+                "icon": ach.icon,
+                "rarity": ach.rarity
+            })
+    
+    fragments = []
+    for frag_id in state.collected_fragments:
+        frag = NOTE_FRAGMENTS.get(frag_id)
+        if frag:
+            fragments.append({
+                "id": frag_id,
+                "title": frag["title"],
+                "subject": frag["subject"],
+                "content": frag["content"]
+            })
+    
+    return {
+        "session_id": session_id,
+        "character": CHARACTERS[state.character].name,
+        "note_type": state.note_type,
+        "progress": STORY_NODES[state.current_node].progress if state.current_node in STORY_NODES else 0,
+        "game_ended": state.game_ended,
+        "teacher_alertness": state.teacher_alertness,
+        "classmate_suspicion": state.classmate_suspicion,
+        "achievements": achievements,
+        "collected_fragments": fragments,
+        "total_fragments": len(NOTE_FRAGMENTS),
+        "total_achievements": len(ACHIEVEMENTS)
+    }
+
+
+@app.get("/api/generate-receipt/{session_id}")
+async def generate_receipt(session_id: str):
+    if session_id not in active_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    state = active_sessions[session_id]
+    
+    if not state.game_ended:
+        raise HTTPException(status_code=400, detail="Game not ended yet")
+    
+    current_node = STORY_NODES.get(state.current_node)
+    
+    achievements = []
+    for ach_id in state.unlocked_achievements:
+        ach = ACHIEVEMENTS.get(ach_id)
+        if ach:
+            achievements.append(f"{ach.icon} {ach.name}")
+    
+    fragments_collected = len(state.collected_fragments)
+    total_fragments = len(NOTE_FRAGMENTS)
+    
+    character = CHARACTERS.get(state.character, CHARACTERS["player"])
+    
+    ending_text = "越狱成功" if current_node and current_node.ending_type == "success" else "越狱失败"
+    
+    receipt_content = f"""
+========================================
+           INCognito RPG - 隐身笔记
+              通关证明
+========================================
+日期: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+角色: {character.name} {character.portrait}
+笔记类型: {state.note_type.upper()}
+========================================
+结果: {ending_text}
+进度: {state.keystroke_count} 次敲击
+老师警觉度: {state.teacher_alertness}%
+同学怀疑度: {state.classmate_suspicion}%
+========================================
+解锁成就:
+{chr(10).join(achievements) if achievements else "无"}
+========================================
+笔记碎片收集: {fragments_collected}/{total_fragments}
+========================================
+              感谢游玩!
+         逃课有风险，模仿需谨慎
+========================================
+"""
+    
+    return {
+        "receipt": receipt_content,
+        "character": character.name,
+        "ending": ending_text,
+        "achievements_count": len(achievements),
+        "fragments_count": fragments_collected
+    }
+
 
 @app.post("/api/continue-story/{session_id}")
 async def continue_story(session_id: str):
@@ -834,12 +1434,18 @@ async def continue_story(session_id: str):
             "description": current_node.description,
             "progress": current_node.progress,
             "is_choice": True,
-            "options": current_node.options
+            "options": current_node.options,
+            "teacher_alertness": state.teacher_alertness,
+            "classmate_suspicion": state.classmate_suspicion
         }
     
     if current_node.next_node:
         state.current_node = current_node.next_node
         next_node = STORY_NODES[state.current_node]
+        
+        if next_node.risk_modifier:
+            state.teacher_alertness = max(0, min(100, state.teacher_alertness + next_node.risk_modifier.get("teacher", 0)))
+            state.classmate_suspicion = max(0, min(100, state.classmate_suspicion + next_node.risk_modifier.get("classmate", 0)))
         
         return {
             "description": next_node.description,
@@ -847,15 +1453,20 @@ async def continue_story(session_id: str):
             "is_choice": next_node.is_choice,
             "options": next_node.options,
             "is_ending": next_node.is_ending,
-            "ending_type": next_node.ending_type
+            "ending_type": next_node.ending_type,
+            "teacher_alertness": state.teacher_alertness,
+            "classmate_suspicion": state.classmate_suspicion
         }
     
     return {
         "description": current_node.description,
         "progress": current_node.progress,
         "is_choice": False,
-        "options": []
+        "options": [],
+        "teacher_alertness": state.teacher_alertness,
+        "classmate_suspicion": state.classmate_suspicion
     }
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=2833)
